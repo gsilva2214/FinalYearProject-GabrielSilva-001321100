@@ -2,10 +2,10 @@ from pathlib import Path
 import pandas as pd
 import matplotlib.pyplot as plt
 
-ROOT = Path(__file__).resolve().parents[1]
-IN_CSV = ROOT / "output" / "snort_alerts.csv"
-FIG_DIR = ROOT / "output" / "figures"
-TAB_DIR = ROOT / "output" / "tables"
+ROOT = Path(__file__).resolve().parents[2]
+IN_CSV = ROOT / "outputs" / "snort" / "snort_alerts.csv"
+FIG_DIR = ROOT / "outputs" / "snort" / "figures"
+TAB_DIR = ROOT / "outputs" / "snort" / "tables"
 FIG_DIR.mkdir(parents=True, exist_ok=True)
 TAB_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -118,8 +118,8 @@ def main() -> None:
     alerts_per_hour(df)
     top10_signatures(df, sid_col)
     priority_distribution(df, prio_col)
-    print("Core figures saved in output/figures")
-    print("Tables saved in output/tables")
+    print("Core figures saved in outputs/snort/figures")
+    print("Tables saved in outputs/snort/tables")
     print("Columns:", ts_col, sid_col, prio_col)
 
 
