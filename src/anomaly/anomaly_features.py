@@ -2,9 +2,9 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-ROOT = Path(__file__).resolve().parents[1]
-IN_CSV = ROOT / "output" / "snort_alerts.csv"
-OUT_DIR = ROOT / "output" / "anomaly"
+ROOT = Path(__file__).resolve().parents[2]
+IN_CSV = ROOT / "data" / "snort_alerts.csv"
+OUT_DIR = ROOT / "outputs" / "anomaly"
 TAB_DIR = OUT_DIR / "tables"
 TAB_DIR.mkdir(parents=True, exist_ok=True)
 
