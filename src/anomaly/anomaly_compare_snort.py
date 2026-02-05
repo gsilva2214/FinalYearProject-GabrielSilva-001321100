@@ -2,8 +2,8 @@ from pathlib import Path
 import pandas as pd
 import matplotlib.pyplot as plt
 
-ROOT = Path(__file__).resolve().parents[1]
-ANOM_DIR = ROOT / "output" / "anomaly"
+ROOT = Path(__file__).resolve().parents[2]
+ANOM_DIR = ROOT / "outputs" / "anomaly"
 TAB_DIR = ANOM_DIR / "tables"
 FIG_DIR = ANOM_DIR / "figures"
 TAB_DIR.mkdir(parents=True, exist_ok=True)
