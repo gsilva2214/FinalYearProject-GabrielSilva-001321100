@@ -2,11 +2,14 @@ import re
 import pandas as pd
 from pathlib import Path
 
-DATA_DIR = Path(r"C:\Users\gsila\Downloads\Final Year Project\Snort\Data")
-OUT_DIR = Path(r"C:\Users\gsila\Downloads\Final Year Project\Snort\output")
+ROOT = Path(__file__).resolve().parents[2]
+
+DATA_DIR = ROOT / "data" / "alerts_monday_to_friday"
+OUT_DIR = ROOT / "outputs" / "snort"
 OUT_DIR.mkdir(parents=True, exist_ok=True)
 
-# Extended regex to include classification and priority
+
+# extended regex to include classification and priority
 pattern = re.compile(
     r'^(?P<ts>\d{2}/\d{2}-\d{2}:\d{2}:\d{2}\.\d+).*?'
     r'\[(?P<gid>\d+):(?P<sid>\d+):(?P<rev>\d+)\]\s+'
