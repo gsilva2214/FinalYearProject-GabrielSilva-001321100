@@ -3,10 +3,10 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
-ROOT = Path(__file__).resolve().parents[1]
-IN_CSV = ROOT / "output" / "snort_alerts.csv"
-FIG_DIR = ROOT / "output" / "figures"
-TAB_DIR = ROOT / "output" / "tables"
+ROOT = Path(__file__).resolve().parents[2]
+IN_CSV = ROOT / "outputs" / "snort" / "snort_alerts.csv"
+FIG_DIR = ROOT / "outputs" / "snort" / "figures"
+TAB_DIR = ROOT / "outputs" / "snort" / "tables"
 FIG_DIR.mkdir(parents=True, exist_ok=True)
 TAB_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -154,7 +154,7 @@ def main() -> None:
     stacked_priorities_per_day(df)
     top_source_ips_attack_day(df)
 
-    print("Extras saved in output/figures and output/tables")
+    print("Extras saved in outputs/snort/figures and outputs/snort/tables")
 
 
 if __name__ == "__main__":
