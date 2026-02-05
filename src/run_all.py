@@ -13,6 +13,7 @@ PIPELINE = [
     ("Anomaly features", ROOT / "src" / "anomaly" / "anomaly_features.py"),
     ("Anomaly train and score", ROOT / "src" / "anomaly" / "anomaly_train_score.py"),
     ("Anomaly vs Snort comparison", ROOT / "src" / "anomaly" / "anomaly_compare_snort.py"),
+    ("Compare metrics", ROOT / "src" / "compare" / "metrics_compare.py"),
 ]
 
 
