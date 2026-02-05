@@ -4,9 +4,9 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from sklearn.ensemble import IsolationForest
 
-ROOT = Path(__file__).resolve().parents[1]
-TAB_DIR = ROOT / "output" / "anomaly" / "tables"
-FIG_DIR = ROOT / "output" / "anomaly" / "figures"
+ROOT = Path(__file__).resolve().parents[2]
+TAB_DIR = ROOT / "outputs" / "anomaly" / "tables"
+FIG_DIR = ROOT / "outputs" / "anomaly" / "figures"
 TAB_DIR.mkdir(parents=True, exist_ok=True)
 FIG_DIR.mkdir(parents=True, exist_ok=True)
 
