@@ -3,10 +3,10 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
-ROOT = Path(__file__).resolve().parents[1]
-IN_CSV = ROOT / "output" / "snort_alerts.csv"
-FIG_DIR = ROOT / "output" / "figures"
-TAB_DIR = ROOT / "output" / "tables"
+ROOT = Path(__file__).resolve().parents[2]
+IN_CSV = ROOT / "outputs" / "snort" / "snort_alerts.csv"
+FIG_DIR = ROOT / "outputs" / "snort" / "figures"
+TAB_DIR = ROOT / "outputs" / "snort" / "tables"
 FIG_DIR.mkdir(parents=True, exist_ok=True)
 TAB_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -148,7 +148,7 @@ def false_positive_proxy(df: pd.DataFrame, sid_col: str, baseline_day: str, atta
     base_top.to_csv(TAB_DIR / "false_positive_proxy.csv", index=False)
 
     if base_top.empty:
-        notes = ROOT / "output" / "snort_comparisons_notes.txt"
+        notes = ROOT / "outputs" / "snort" / "snort_comparisons_notes.txt"
         notes.write_text(
             "False positive proxy skipped. Baseline day produced zero SIDs.\n",
             encoding="utf-8",
@@ -195,7 +195,7 @@ def write_notes(summary: pd.DataFrame, tc: pd.DataFrame, baseline_day: str, atta
     lines.append(f"Peak hours: {tc.loc[0, 'peak_hours_topn']}.")
     lines.append(f"Percent in peak hours: {float(tc.loc[0, 'percent_in_peak_hours']):.2f}.")
 
-    (ROOT / "output" / "snort_comparisons_notes.txt").write_text("\n".join(lines), encoding="utf-8")
+    (ROOT / "outputs" / "snort" / "snort_comparisons_notes.txt").write_text("\n".join(lines), encoding="utf-8")
 
 
 def main() -> None:
@@ -212,8 +212,8 @@ def main() -> None:
     print("Done.")
     print("Baseline day:", baseline_day)
     print("Attack day:", attack_day)
-    print("Figures saved in output/figures")
-    print("Tables saved in output/tables")
+    print("Figures saved in outputs/snort/figures")
+    print("Tables saved in outputs/snort/tables")
 
 
 if __name__ == "__main__":
