@@ -10,12 +10,11 @@ TAB_DIR = ROOT / "outputs" / "snort" / "tables"
 FIG_DIR.mkdir(parents=True, exist_ok=True)
 TAB_DIR.mkdir(parents=True, exist_ok=True)
 
-CAPTURE_YEAR = "2024"
+CAPTURE_YEAR = "2017"
 TS_FORMAT_WITH_YEAR = "%Y/%m/%d/%H:%M:%S.%f"
 
 FALSE_POS_TOPK = 10
 PEAK_TOPN_HOURS = 4
-
 
 def pick_col(df: pd.DataFrame, names: list[str]) -> str:
     cols = list(df.columns)
@@ -59,7 +58,6 @@ def load_df() -> tuple[pd.DataFrame, str]:
     df[sid_col] = df[sid_col].astype(int)
 
     return df, sid_col
-
 
 def choose_baseline_and_attack(df: pd.DataFrame) -> tuple[str, str, pd.DataFrame]:
     counts = df.groupby("day_name").size().rename("alerts").reset_index()
@@ -107,7 +105,6 @@ def signature_diversity_per_day(df: pd.DataFrame, sid_col: str) -> pd.DataFrame:
     plt.tight_layout()
     plt.savefig(FIG_DIR / "05_signature_diversity_per_day.png", dpi=220)
     plt.close()
-
     t.to_csv(TAB_DIR / "signature_diversity_per_day.csv", index=False)
     return t
 
@@ -115,7 +112,6 @@ def signature_diversity_per_day(df: pd.DataFrame, sid_col: str) -> pd.DataFrame:
 def time_concentration(df: pd.DataFrame) -> pd.DataFrame:
     per_hour = df.groupby("hour").size().sort_values(ascending=False)
     peak_hours = list(per_hour.head(PEAK_TOPN_HOURS).index.astype(int))
-
     total = len(df)
     peak = int(df["hour"].isin(peak_hours).sum())
 
@@ -129,7 +125,6 @@ def time_concentration(df: pd.DataFrame) -> pd.DataFrame:
     )
     out.to_csv(TAB_DIR / "time_concentration.csv", index=False)
     return out
-
 
 def false_positive_proxy(df: pd.DataFrame, sid_col: str, baseline_day: str, attack_day: str) -> pd.DataFrame:
     base = df[df["day_name"] == baseline_day]
@@ -168,9 +163,7 @@ def false_positive_proxy(df: pd.DataFrame, sid_col: str, baseline_day: str, atta
     plt.tight_layout()
     plt.savefig(FIG_DIR / "06_false_positive_proxy.png", dpi=220)
     plt.close()
-
     return base_top
-
 
 def write_notes(summary: pd.DataFrame, tc: pd.DataFrame, baseline_day: str, attack_day: str) -> None:
     lines: list[str] = []
@@ -189,32 +182,26 @@ def write_notes(summary: pd.DataFrame, tc: pd.DataFrame, baseline_day: str, atta
     lines.append("")
     lines.append("Sentence for marks")
     lines.append("Several high-frequency alerts were observed during normal traffic periods, indicating potential false positives inherent to signature-based detection.")
-
     lines.append("")
     lines.append("Time concentration")
     lines.append(f"Peak hours: {tc.loc[0, 'peak_hours_topn']}.")
     lines.append(f"Percent in peak hours: {float(tc.loc[0, 'percent_in_peak_hours']):.2f}.")
-
     (ROOT / "outputs" / "snort" / "snort_comparisons_notes.txt").write_text("\n".join(lines), encoding="utf-8")
-
 
 def main() -> None:
     df, sid_col = load_df()
 
     baseline_day, attack_day, weekday_counts = choose_baseline_and_attack(df)
-
     summary = monday_vs_friday_summary(df, sid_col, baseline_day, attack_day)
     signature_diversity_per_day(df, sid_col)
     tc = time_concentration(df)
     false_positive_proxy(df, sid_col, baseline_day, attack_day)
     write_notes(summary, tc, baseline_day, attack_day)
-
     print("Done.")
     print("Baseline day:", baseline_day)
     print("Attack day:", attack_day)
     print("Figures saved in outputs/snort/figures")
     print("Tables saved in outputs/snort/tables")
-
 
 if __name__ == "__main__":
     main()

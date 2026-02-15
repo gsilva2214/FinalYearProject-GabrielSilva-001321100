@@ -10,11 +10,9 @@ TAB_DIR = ROOT / "outputs" / "snort" / "tables"
 FIG_DIR.mkdir(parents=True, exist_ok=True)
 TAB_DIR.mkdir(parents=True, exist_ok=True)
 
-CAPTURE_YEAR = "2024"
+CAPTURE_YEAR = "2017"
 TS_FORMAT_WITH_YEAR = "%Y/%m/%d/%H:%M:%S.%f"
-
 ATTACK_DAY = "Friday"
-
 
 def pick_col(df: pd.DataFrame, names: list[str], required: bool = True) -> str | None:
     cols = list(df.columns)
@@ -34,7 +32,6 @@ def pick_col(df: pd.DataFrame, names: list[str], required: bool = True) -> str |
         raise KeyError(f"Missing column. Tried {names}. Present {cols}")
     return None
 
-
 def parse_snort_ts(series: pd.Series) -> pd.Series:
     s = series.astype(str)
     s = CAPTURE_YEAR + "/" + s.str.replace("-", "/", n=1)
@@ -42,7 +39,6 @@ def parse_snort_ts(series: pd.Series) -> pd.Series:
     if out.isna().mean() > 0.50:
         out = pd.to_datetime(s, errors="coerce")
     return out
-
 
 def load_df() -> pd.DataFrame:
     df = pd.read_csv(IN_CSV)
@@ -56,7 +52,6 @@ def load_df() -> pd.DataFrame:
 
     df["_ts"] = df[ts_col]
     return df
-
 
 def heatmap_alerts_hour_day(df: pd.DataFrame) -> None:
     pivot = df.pivot_table(index="day_name", columns="hour", values="_ts", aggfunc="size", fill_value=0)
@@ -75,7 +70,6 @@ def heatmap_alerts_hour_day(df: pd.DataFrame) -> None:
 
     pivot.reset_index().to_csv(TAB_DIR / "heatmap_alerts_hour_day.csv", index=False)
 
-
 def cumulative_alerts_over_time(df: pd.DataFrame) -> None:
     s = df.sort_values("_ts").copy()
     s["cum_alerts"] = np.arange(1, len(s) + 1)
@@ -88,17 +82,13 @@ def cumulative_alerts_over_time(df: pd.DataFrame) -> None:
     plt.tight_layout()
     plt.savefig(FIG_DIR / "08_cumulative_alerts_over_time.png", dpi=220)
     plt.close()
-
     s[["_ts", "cum_alerts"]].to_csv(TAB_DIR / "cumulative_alerts.csv", index=False)
-
 
 def stacked_priorities_per_day(df: pd.DataFrame) -> None:
     if "priority" not in df.columns:
         return
-
     df2 = df.copy()
     df2["date"] = df2["_ts"].dt.date.astype(str)
-
     tab = df2.pivot_table(index="date", columns=df2["priority"].astype(str), values="_ts", aggfunc="size", fill_value=0).sort_index()
 
     plt.figure(figsize=(11, 5))
@@ -119,7 +109,6 @@ def stacked_priorities_per_day(df: pd.DataFrame) -> None:
 
     tab.reset_index().to_csv(TAB_DIR / "priorities_per_day.csv", index=False)
 
-
 def top_source_ips_attack_day(df: pd.DataFrame) -> None:
     if "src_ip" not in df.columns:
         return
@@ -129,7 +118,6 @@ def top_source_ips_attack_day(df: pd.DataFrame) -> None:
         return
 
     t = fri["src_ip"].astype(str).value_counts().head(10).rename_axis("src_ip").reset_index(name="alerts")
-
     plt.figure(figsize=(10, 5))
     plt.bar(t["src_ip"], t["alerts"])
     plt.xticks(rotation=45, ha="right")
@@ -139,23 +127,18 @@ def top_source_ips_attack_day(df: pd.DataFrame) -> None:
     plt.tight_layout()
     plt.savefig(FIG_DIR / "10_top_source_ips_friday.png", dpi=220)
     plt.close()
-
     t.to_csv(TAB_DIR / "top_source_ips_friday.csv", index=False)
-
 
 def main() -> None:
     df = load_df()
 
-    # Two strong extras
+    # a few extra figures
     heatmap_alerts_hour_day(df)
     cumulative_alerts_over_time(df)
-
-    # Optional extras, keep if you want more figures
     stacked_priorities_per_day(df)
     top_source_ips_attack_day(df)
 
     print("Extras saved in outputs/snort/figures and outputs/snort/tables")
-
 
 if __name__ == "__main__":
     main()

@@ -1,8 +1,31 @@
+"""
+Anomaly Model Training and Scoring - CIC-IDS 2017
+===================================================
+Trains an Isolation Forest on network flow features.
+Evaluates against ground truth labels.
+Completely independent of Snort.
+"""
+
 from pathlib import Path
 import numpy as np
 import pandas as pd
+import matplotlib
+matplotlib.use("Agg")
 import matplotlib.pyplot as plt
+import seaborn as sns
 from sklearn.ensemble import IsolationForest
+from sklearn.preprocessing import StandardScaler
+from sklearn.metrics import (
+    classification_report,
+    confusion_matrix,
+    precision_score,
+    recall_score,
+    f1_score,
+    roc_curve,
+    auc,
+)
+import time
+import json
 
 ROOT = Path(__file__).resolve().parents[2]
 TAB_DIR = ROOT / "outputs" / "anomaly" / "tables"
@@ -10,113 +33,254 @@ FIG_DIR = ROOT / "outputs" / "anomaly" / "figures"
 TAB_DIR.mkdir(parents=True, exist_ok=True)
 FIG_DIR.mkdir(parents=True, exist_ok=True)
 
-WINDOW_SECONDS = 60
-FEATURES_CSV = TAB_DIR / f"anomaly_features_{WINDOW_SECONDS}s.csv"
-
 RANDOM_SEED = 42
-CONTAMINATION = "auto"
-
-THRESHOLD_PERCENTILE = 99.0  # anomalies are top 1 percent of baseline scores
+CONTAMINATION = 0.1  # CIC-IDS is roughly 10-20% attacks
 
 
-def pick_feature_cols(df: pd.DataFrame) -> list[str]:
-    ignore = {"window_start", "day_name", "date"}
-    cols = [c for c in df.columns if c not in ignore]
-
-    bad = []
-    for c in cols:
-        if df[c].dtype == "O":
-            bad.append(c)
-    cols = [c for c in cols if c not in bad]
-
-    keep = [c for c in cols if c not in ["hour"]]
-    keep.append("hour")
-    return keep
-
-
-def save_fig(path: Path, title: str, xlab: str, ylab: str) -> None:
-    plt.title(title)
-    plt.xlabel(xlab)
-    plt.ylabel(ylab)
-    plt.tight_layout()
-    plt.savefig(path, dpi=220)
-    plt.close()
-
-
-def choose_baseline_day(df: pd.DataFrame) -> str:
-    per_day = df.groupby("day_name")["alerts"].sum().sort_values()
-    per_day = per_day[per_day > 0]
-    if len(per_day) == 0:
-        raise RuntimeError("No alerts in features. Check earlier steps.")
-    return str(per_day.index[0])
+def get_feature_columns(df: pd.DataFrame) -> list:
+    exclude = {"label_binary", "label_original"}
+    return [
+        c for c in df.select_dtypes(include=[np.number]).columns
+        if c not in exclude
+    ]
 
 
 def main() -> None:
-    if not FEATURES_CSV.exists():
-        raise FileNotFoundError(f"Missing: {FEATURES_CSV}. Run anomaly_features.py first.")
+    # ==========================================
+    # LOAD cleaned features
+    # ==========================================
+    features_csv = TAB_DIR.parent / "anomaly_results.csv"
+    if not features_csv.exists():
+        raise FileNotFoundError(
+            f"Missing: {features_csv}. "
+            f"Run anomaly_features.py first."
+        )
 
-    df = pd.read_csv(FEATURES_CSV)
-    df["window_start"] = pd.to_datetime(df["window_start"], errors="coerce")
-    df = df.dropna(subset=["window_start"]).copy()
-    df = df.sort_values("window_start")
+    print(f"Loading: {features_csv}")
+    df = pd.read_csv(features_csv, low_memory=False)
 
-    baseline_day = choose_baseline_day(df)
+    feature_cols = get_feature_columns(df)
+    X = df[feature_cols].values
+    y = df["label_binary"].values
 
-    feat_cols = pick_feature_cols(df)
-    X = df[feat_cols].fillna(0).astype(float)
+    print(f"Samples: {len(df)}")
+    print(f"Features: {len(feature_cols)}")
+    print(f"Attacks: {y.sum()}")
+    print(f"Benign: {(y == 0).sum()}")
 
-    base_mask = df["day_name"] == baseline_day
-    X_base = X.loc[base_mask].copy()
+    # ==========================================
+    # SCALE features
+    # ==========================================
+    scaler = StandardScaler()
+    X_scaled = scaler.fit_transform(X)
 
-    if len(X_base) < 30:
-        raise RuntimeError("Baseline too small. Increase window size or pick a different baseline day.")
+    # ==========================================
+    # TRAIN Isolation Forest
+    # ==========================================
+    print("Training Isolation Forest...")
+    start_train = time.time()
 
     model = IsolationForest(
-        n_estimators=300,
-        random_state=RANDOM_SEED,
+        n_estimators=200,
         contamination=CONTAMINATION,
+        random_state=RANDOM_SEED,
+        n_jobs=-1,
     )
-    model.fit(X_base)
+    model.fit(X_scaled)
 
-    score = -model.decision_function(X)
-    df["anomaly_score"] = score
+    train_time = time.time() - start_train
+    print(f"Training time: {train_time:.2f}s")
 
-    base_scores = df.loc[base_mask, "anomaly_score"].values
-    thresh = float(np.percentile(base_scores, THRESHOLD_PERCENTILE))
-    df["is_anomaly"] = (df["anomaly_score"] >= thresh).astype(int)
+    # ==========================================
+    # PREDICT
+    # ==========================================
+    start_pred = time.time()
 
-    out_scores = TAB_DIR / f"anomaly_scores_{WINDOW_SECONDS}s.csv"
-    df.to_csv(out_scores, index=False)
+    raw_preds = model.predict(X_scaled)
+    # IsolationForest: 1 = normal, -1 = anomaly
+    predictions = np.where(raw_preds == -1, 1, 0)
 
-    meta = {
-        "window_seconds": WINDOW_SECONDS,
-        "baseline_day": baseline_day,
-        "threshold_percentile": THRESHOLD_PERCENTILE,
-        "threshold_value": thresh,
-        "feature_count": len(feat_cols),
-        "baseline_rows": int(base_mask.sum()),
-        "total_rows": len(df),
+    anomaly_scores = -model.decision_function(X_scaled)
+
+    pred_time = time.time() - start_pred
+    print(f"Prediction time: {pred_time:.2f}s")
+
+    # ==========================================
+    # EVALUATE against ground truth
+    # ==========================================
+    tn, fp, fn, tp = confusion_matrix(y, predictions).ravel()
+    fpr = fp / (fp + tn)
+    detection_rate = tp / (tp + fn)
+    precision = precision_score(y, predictions, zero_division=0)
+    recall = recall_score(y, predictions, zero_division=0)
+    f1 = f1_score(y, predictions, zero_division=0)
+
+    print("\n=== RESULTS ===")
+    print(f"True Positives:  {tp}")
+    print(f"False Positives: {fp}")
+    print(f"True Negatives:  {tn}")
+    print(f"False Negatives: {fn}")
+    print(f"Precision:       {precision:.4f}")
+    print(f"Recall:          {recall:.4f}")
+    print(f"F1 Score:        {f1:.4f}")
+    print(f"FPR:             {fpr:.4f}")
+    print(f"Detection Rate:  {detection_rate:.4f}")
+
+    # ==========================================
+    # SAVE metrics
+    # ==========================================
+    metrics = {
+        "model": "IsolationForest",
+        "n_estimators": 200,
+        "contamination": CONTAMINATION,
+        "total_samples": int(len(y)),
+        "attack_samples": int(y.sum()),
+        "benign_samples": int((y == 0).sum()),
+        "true_positives": int(tp),
+        "false_positives": int(fp),
+        "true_negatives": int(tn),
+        "false_negatives": int(fn),
+        "precision": round(precision, 4),
+        "recall": round(recall, 4),
+        "f1_score": round(f1, 4),
+        "false_positive_rate": round(fpr, 4),
+        "detection_rate": round(detection_rate, 4),
+        "train_time_seconds": round(train_time, 2),
+        "prediction_time_seconds": round(pred_time, 2),
+        "feature_count": len(feature_cols),
     }
-    meta_path = TAB_DIR / f"anomaly_model_meta_{WINDOW_SECONDS}s.csv"
-    pd.DataFrame([meta]).to_csv(meta_path, index=False)
 
-    plt.figure(figsize=(10, 4))
-    plt.plot(df["window_start"], df["anomaly_score"])
-    save_fig(FIG_DIR / "01_anomaly_score_over_time.png", "Anomaly score over time", "Time", "Anomaly score")
+    metrics_path = TAB_DIR / "anomaly_metrics.csv"
+    pd.DataFrame([metrics]).to_csv(metrics_path, index=False)
 
-    per_day = df.groupby("date")["is_anomaly"].mean().rename("pct_anomalous_windows").reset_index()
-    per_day["pct_anomalous_windows"] = per_day["pct_anomalous_windows"] * 100.0
-    per_day.to_csv(TAB_DIR / f"anomaly_percent_per_day_{WINDOW_SECONDS}s.csv", index=False)
+    metrics_json = TAB_DIR / "anomaly_metrics.json"
+    with open(metrics_json, "w") as f:
+        json.dump(metrics, f, indent=2)
 
-    plt.figure(figsize=(10, 4))
-    plt.plot(per_day["date"], per_day["pct_anomalous_windows"], marker="o")
-    plt.xticks(rotation=45, ha="right")
-    save_fig(FIG_DIR / "02_percent_anomalous_windows_per_day.png", "Percent anomalous windows per day", "Date", "Percent")
+    # ==========================================
+    # PER ATTACK TYPE performance
+    # ==========================================
+    attack_perf = []
+    for attack_type in df["label_original"].unique():
+        mask = df["label_original"] == attack_type
+        if mask.sum() == 0:
+            continue
+        a_truth = y[mask]
+        a_preds = predictions[mask]
+        detected = int((a_preds == 1).sum())
+        total = int(mask.sum())
+        attack_perf.append({
+            "attack_type": attack_type,
+            "total": total,
+            "detected_as_anomaly": detected,
+            "detection_rate": round(
+                detected / total * 100, 2
+            ),
+        })
 
-    print("Wrote:", out_scores)
-    print("Wrote:", meta_path)
-    print("Baseline day:", baseline_day)
-    print("Threshold value:", thresh)
+    attack_df = pd.DataFrame(attack_perf).sort_values(
+        "detection_rate", ascending=False
+    )
+    attack_df.to_csv(
+        TAB_DIR / "per_attack_detection.csv", index=False
+    )
+    print("\nPer attack type detection:")
+    print(attack_df.to_string(index=False))
+
+    # ==========================================
+    # SAVE predictions for comparison stage
+    # ==========================================
+    results_df = df[["label_original", "label_binary"]].copy()
+    results_df["ml_prediction"] = predictions
+    results_df["anomaly_score"] = anomaly_scores
+    results_df.to_csv(
+        TAB_DIR / "anomaly_predictions.csv", index=False
+    )
+
+    # ==========================================
+    # FIGURES
+    # ==========================================
+
+    # 1. Confusion Matrix
+    plt.figure(figsize=(8, 6))
+    cm = confusion_matrix(y, predictions)
+
+    labels = [[f"{val:,}" for val in row] for row in cm]
+    labels = np.array(labels)
+
+    sns.heatmap(
+        cm,
+        annot=labels,
+        fmt="",
+        cmap="Blues",
+        xticklabels=["BENIGN", "ATTACK"],
+        yticklabels=["BENIGN", "ATTACK"],
+        cbar=False,
+    )
+
+    plt.title("Anomaly Detection - Confusion Matrix")
+    plt.xlabel("Predicted")
+    plt.ylabel("Actual")
+    plt.tight_layout()
+    plt.savefig(FIG_DIR / "01_confusion_matrix.png", dpi=220)
+    plt.close()
+
+    # 2. Per Attack Type Detection Rate
+    plt.figure(figsize=(12, 6))
+    attack_plot = attack_df[
+        attack_df["attack_type"] != "BENIGN"
+    ].copy()
+    plt.barh(
+        attack_plot["attack_type"],
+        attack_plot["detection_rate"],
+    )
+    plt.title("Detection Rate by Attack Type")
+    plt.xlabel("Detection Rate (%)")
+    plt.ylabel("Attack Type")
+    plt.tight_layout()
+    plt.savefig(
+        FIG_DIR / "02_per_attack_detection_rate.png", dpi=220
+    )
+    plt.close()
+
+    # 3. Anomaly Score Distribution
+    plt.figure(figsize=(10, 5))
+    plt.hist(
+        anomaly_scores[y == 0],
+        bins=100, alpha=0.5, label="BENIGN", density=True,
+    )
+    plt.hist(
+        anomaly_scores[y == 1],
+        bins=100, alpha=0.5, label="ATTACK", density=True,
+    )
+    plt.title("Anomaly Score Distribution")
+    plt.xlabel("Anomaly Score")
+    plt.ylabel("Density")
+    plt.legend()
+    plt.tight_layout()
+    plt.savefig(
+        FIG_DIR / "03_score_distribution.png", dpi=220
+    )
+    plt.close()
+
+    # 4. ROC Curve
+    fpr_curve, tpr_curve, _ = roc_curve(y, anomaly_scores)
+    roc_auc = auc(fpr_curve, tpr_curve)
+    plt.figure(figsize=(8, 6))
+    plt.plot(
+        fpr_curve, tpr_curve,
+        label=f"AUC = {roc_auc:.4f}",
+    )
+    plt.plot([0, 1], [0, 1], "k--")
+    plt.title("Anomaly Detection - ROC Curve")
+    plt.xlabel("False Positive Rate")
+    plt.ylabel("True Positive Rate")
+    plt.legend()
+    plt.tight_layout()
+    plt.savefig(FIG_DIR / "04_roc_curve.png", dpi=220)
+    plt.close()
+
+    print(f"\nAll outputs saved to {TAB_DIR} and {FIG_DIR}")
 
 
 if __name__ == "__main__":
