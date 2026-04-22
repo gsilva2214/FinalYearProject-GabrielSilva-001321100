@@ -2,9 +2,6 @@
 pycache/
 *.pyc
 
-data/
-outputs/
-
 *.csv
 *.log
 *.pcap

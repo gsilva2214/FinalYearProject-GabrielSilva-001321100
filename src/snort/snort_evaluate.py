@@ -61,7 +61,7 @@ def load_snort_alerts(path: Path) -> pd.DataFrame: # load the fully parsed snort
     print(f"  Total alerts: {len(df)}")
     return df
 
-def map_snort_to_flows( #flow is marked as flagged by Snort if a Snort alert matches its IP pair and destination port on the same day. forward direction only.
+def map_snort_to_flows( #flow is marked as flagged by Snort
     flows: pd.DataFrame,
     alerts: pd.DataFrame,
 ) -> tuple:
@@ -90,7 +90,6 @@ def map_snort_to_flows( #flow is marked as flagged by Snort if a Snort alert mat
 
     alerts = alerts.dropna(subset=["dst_port"])
     alerts["dst_port"] = alerts["dst_port"].astype(int)
-    # Parse dates
     def snort_ts_to_date(ts_str):
         try:
             month_day = ts_str.split("-")[0]
@@ -131,8 +130,7 @@ def map_snort_to_flows( #flow is marked as flagged by Snort if a Snort alert mat
         src = str(row["src_ip"]).strip()
         dst = str(row["dst_ip"]).strip()
         port = int(row["dst_port"])
-
-        daily_keys[date].add((src, dst, port)) # Forward only: exact src → dst on dst_port
+        daily_keys[date].add((src, dst, port))
 
     total = sum(len(v) for v in daily_keys.values())
     print(f"  Unique forward keys: {total}")
@@ -154,7 +152,7 @@ def map_snort_to_flows( #flow is marked as flagged by Snort if a Snort alert mat
 
         if (src, dst, port) in daily_keys[date]:
             return 1
-        if (dst, src, port) in daily_keys[date]: # Check reverse IPs same port
+        if (dst, src, port) in daily_keys[date]: # check reverse IPs same port
             return 1
         return 0
 
@@ -169,7 +167,7 @@ def map_snort_to_flows( #flow is marked as flagged by Snort if a Snort alert mat
     print(f"  Mapping time: {elapsed:.2f}s")
     return flows, elapsed
 
-def evaluate_snort(flows: pd.DataFrame, mapping_time: float) -> None: # Calculate and save all Snort evaluation metrics
+def evaluate_snort(flows: pd.DataFrame, mapping_time: float) -> None: # calculate and save all snort evaluation
 
     y_true = flows["label_binary"].values
     y_pred = flows["snort_prediction"].values
@@ -193,7 +191,7 @@ def evaluate_snort(flows: pd.DataFrame, mapping_time: float) -> None: # Calculat
     print(f"FPR:             {fpr:.4f}")
     print(f"Detection Rate:  {detection_rate:.4f}")
 
-    # SAVE METRICS (same format as anomaly)
+    # SAVE METRICS
     metrics = {
         "model": "Snort Rule-Based",
         "total_samples": int(len(y_true)),
@@ -245,8 +243,6 @@ def evaluate_snort(flows: pd.DataFrame, mapping_time: float) -> None: # Calculat
     print("\nPer attack type detection:")
     print(attack_df.to_string(index=False))
 
-    # SAVE per-flow predictions (for hybrid)
-
     pred_df = flows[[
         "label_original",
         "label_binary",
@@ -256,9 +252,7 @@ def evaluate_snort(flows: pd.DataFrame, mapping_time: float) -> None: # Calculat
         TAB_DIR / "snort_predictions.csv", index=False
     )
 
-    # FIGURES
-
-    # 1. Confusion Matrix
+    # figures for results in the report --------- confusion Matrix
     plt.figure(figsize=(8, 6))
     cm = confusion_matrix(y_true, y_pred)
 
@@ -284,7 +278,7 @@ def evaluate_snort(flows: pd.DataFrame, mapping_time: float) -> None: # Calculat
     )
     plt.close()
 
-    # 2. Per Attack Type Detection
+    # per Attack Type Detection
     plt.figure(figsize=(12, 6))
     attack_plot = attack_df[
         attack_df["attack_type"] != "BENIGN"
@@ -305,7 +299,7 @@ def evaluate_snort(flows: pd.DataFrame, mapping_time: float) -> None: # Calculat
         )
         plt.close()
 
-    # 3. What Snort flagged vs reality
+    # Snorts flagged compared to reality
     summary_data = {
         "Category": [
             "True Positives\n(Correct Detections)",
@@ -334,7 +328,7 @@ def evaluate_snort(flows: pd.DataFrame, mapping_time: float) -> None: # Calculat
 
 
 def main() -> None:
-    # Check files exist
+    # check if files exist
     if not SNORT_ALERTS_FULL.exists():
         raise FileNotFoundError(
             f"Missing: {SNORT_ALERTS_FULL}\n"
@@ -349,10 +343,10 @@ def main() -> None:
             f"place at: {CICIDS_CSV}"
         )
 
-    # Load both datasets
+    # load both datasets
     flows = load_cicids(CICIDS_CSV)
     alerts = load_snort_alerts(SNORT_ALERTS_FULL)
-    # Map and evaluate
+    # mapping  and evaluate
     flows, mapping_time = map_snort_to_flows(flows, alerts)
     evaluate_snort(flows, mapping_time)
 

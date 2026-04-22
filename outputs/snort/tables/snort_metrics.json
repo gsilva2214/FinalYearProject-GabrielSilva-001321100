@@ -1,0 +1,17 @@
+{
+  "model": "Snort Rule-Based",
+  "total_samples": 2827876,
+  "attack_samples": 556556,
+  "benign_samples": 2271320,
+  "true_positives": 9536,
+  "false_positives": 74223,
+  "true_negatives": 2197097,
+  "false_negatives": 547020,
+  "precision": 0.1139,
+  "recall": 0.0171,
+  "f1_score": 0.0298,
+  "false_positive_rate": 0.0327,
+  "detection_rate": 0.0171,
+  "train_time_seconds": 0,
+  "prediction_time_seconds": 37.95
+}

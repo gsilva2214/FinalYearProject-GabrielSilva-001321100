@@ -13,7 +13,6 @@ CAPTURE_YEAR = "2017"
 
 TS_FORMAT_WITH_YEAR = "%Y/%m/%d/%H:%M:%S.%f"
 
-
 def pick_col(df: pd.DataFrame, names: list[str], required: bool = True) -> str | None:
     cols = list(df.columns)
     lower = {c.lower(): c for c in cols}

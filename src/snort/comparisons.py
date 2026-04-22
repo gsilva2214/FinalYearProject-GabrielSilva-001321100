@@ -29,7 +29,6 @@ def pick_col(df: pd.DataFrame, names: list[str]) -> str:
                 return c
     raise KeyError(f"Missing column. Tried {names}. Present {cols}")
 
-
 def parse_snort_ts(series: pd.Series) -> pd.Series:
     s = series.astype(str)
     s = CAPTURE_YEAR + "/" + s.str.replace("-", "/", n=1)
@@ -37,7 +36,6 @@ def parse_snort_ts(series: pd.Series) -> pd.Series:
     if out.isna().mean() > 0.50:
         out = pd.to_datetime(s, errors="coerce")
     return out
-
 
 def load_df() -> tuple[pd.DataFrame, str]:
     df = pd.read_csv(IN_CSV)
@@ -73,7 +71,6 @@ def choose_baseline_and_attack(df: pd.DataFrame) -> tuple[str, str, pd.DataFrame
     counts.to_csv(TAB_DIR / "alerts_by_weekday.csv", index=False)
     return str(baseline_day), str(attack_day), counts
 
-
 def monday_vs_friday_summary(df: pd.DataFrame, sid_col: str, baseline_day: str, attack_day: str) -> pd.DataFrame:
     base = df[df["day_name"] == baseline_day]
     atk = df[df["day_name"] == attack_day]
@@ -92,7 +89,6 @@ def monday_vs_friday_summary(df: pd.DataFrame, sid_col: str, baseline_day: str, 
     out.to_csv(TAB_DIR / "baseline_vs_attack_summary.csv", index=False)
     return out
 
-
 def signature_diversity_per_day(df: pd.DataFrame, sid_col: str) -> pd.DataFrame:
     t = df.groupby("date")[sid_col].nunique().sort_index().rename("unique_sids").reset_index()
 
@@ -107,7 +103,6 @@ def signature_diversity_per_day(df: pd.DataFrame, sid_col: str) -> pd.DataFrame:
     plt.close()
     t.to_csv(TAB_DIR / "signature_diversity_per_day.csv", index=False)
     return t
-
 
 def time_concentration(df: pd.DataFrame) -> pd.DataFrame:
     per_hour = df.groupby("hour").size().sort_values(ascending=False)

@@ -1,29 +1,23 @@
 import pandas as pd
 from pathlib import Path
-from typing import Optional
 
-
-def parse_line(line): # Parse a single Snort fast-alert line using string ops
+def parse_line(line): # parse a single snort fast alert line
     line = line.strip()
     if not line:
         return None
 
-    # Timestamp
-    # First space-delimited token
+    # timestamp
     space_idx = line.find("  ")
     if space_idx < 0:
         return None
     ts = line[:space_idx].strip()
 
-    # SID section: find [gid:sid:rev]
-    # Skip past first [**]
-    first_star = line.find("[**]")
+    first_star = line.find("[**]")     # SID section to find [gid:sid:rev] Skip past first [**]
     if first_star < 0:
         return None
     after_first_star = first_star + 4
 
-    # Find [gid:sid:rev]
-    bracket_open = line.find("[", after_first_star)
+    bracket_open = line.find("[", after_first_star) # Find [gid:sid:rev]
     bracket_close = line.find("]", bracket_open)
     if bracket_open < 0 or bracket_close < 0:
         return None
@@ -57,8 +51,7 @@ def parse_line(line): # Parse a single Snort fast-alert line using string ops
                 class_content_start:class_end
             ].strip()
 
-    # priority
-    prio_marker = "[Priority: "
+    prio_marker = "[Priority: "     # priority
     prio_start = line.find(prio_marker)
     priority = 0
     if prio_start >= 0:
@@ -72,8 +65,6 @@ def parse_line(line): # Parse a single Snort fast-alert line using string ops
             except ValueError:
                 priority = 0
 
-    # Protocol, IPs, Ports
-    # Find {PROTOCOL} src -> dst
     proto = None
     src_ip = None
     src_port = None
@@ -128,12 +119,9 @@ def parse_line(line): # Parse a single Snort fast-alert line using string ops
         "dst_port": dst_port,
     }
 
-
 def parse_snort_alerts(
     input_path: str,
     output_csv: str,
-    figures_dir: Optional[str] = None,
-    tables_dir: Optional[str] = None,
 ) -> str:
 
     data_dir = Path(input_path)

@@ -1,11 +1,3 @@
-"""
-Comparative Evaluation: Snort vs Anomaly-Based ML
-==================================================
-Loads results from both independent detection tracks.
-Compares against CIC-IDS 2017 ground truth.
-Produces head-to-head metrics, figures, and tables.
-"""
-
 from pathlib import Path
 import numpy as np
 import pandas as pd
@@ -40,10 +32,7 @@ def main() -> None:
     TAB_DIR.mkdir(parents=True, exist_ok=True)
     FIG_DIR.mkdir(parents=True, exist_ok=True)
 
-    # ==========================================
-    # LOAD METRICS FROM BOTH TRACKS
-    # ==========================================
-    anomaly_metrics_path = (
+    anomaly_metrics_path = ( # LOAD METRICS FROM BOTH TRACKS
         root / "outputs" / "anomaly" / "tables"
         / "anomaly_metrics.json"
     )
@@ -71,10 +60,7 @@ def main() -> None:
     print(f"  Anomaly F1: {anomaly_metrics['f1_score']}")
     print(f"  Snort F1:   {snort_metrics['f1_score']}")
 
-    # ==========================================
-    # HEAD TO HEAD COMPARISON TABLE
-    # ==========================================
-    print("\n=== HEAD TO HEAD COMPARISON ===")
+    print("\n=== HEAD TO HEAD COMPARISON ===")     # HEAD TO HEAD COMPARISON TABLE
 
     comparison = {
         "Metric": [
@@ -126,10 +112,7 @@ def main() -> None:
     )
     print(comp_df.to_string(index=False))
 
-    # ==========================================
-    # PER ATTACK TYPE COMPARISON
-    # ==========================================
-    anomaly_per_attack_path = (
+    anomaly_per_attack_path = ( # PER ATTACK TYPE COMPARISON
         root / "outputs" / "anomaly" / "tables"
         / "per_attack_detection.csv"
     )
@@ -168,8 +151,7 @@ def main() -> None:
         )
         print(per_attack.to_string(index=False))
 
-        # ---- Figure: Side by side bar chart ----
-        plot_df = per_attack[
+        plot_df = per_attack[         # Side by side bar chart
             per_attack["attack_type"] != "BENIGN"
         ].copy()
 
@@ -220,10 +202,7 @@ def main() -> None:
             plt.close()
             print("\nSaved: 01_per_attack_comparison.png")
 
-    # ==========================================
-    # OVERALL METRICS BAR CHART
-    # ==========================================
-    metrics_to_plot = [
+    metrics_to_plot = [     # OVERALL METRICS BAR CHART
         "precision", "recall", "f1_score",
         "false_positive_rate",
     ]
@@ -263,10 +242,7 @@ def main() -> None:
     plt.close()
     print("Saved: 02_overall_comparison.png")
 
-    # ==========================================
-    # HYBRID ANALYSIS
-    # ==========================================
-    anomaly_pred_path = (
+    anomaly_pred_path = (     # HYBRID ANALYSIS
         root / "outputs" / "anomaly" / "tables"
         / "anomaly_predictions.csv"
     )
@@ -281,8 +257,7 @@ def main() -> None:
         anom_preds = pd.read_csv(anomaly_pred_path)
         snort_preds = pd.read_csv(snort_pred_path)
 
-        # Check they are same length
-        if len(anom_preds) != len(snort_preds):
+        if len(anom_preds) != len(snort_preds):         # Checks they are same length
             print(
                 f"WARNING: Different lengths. "
                 f"Anomaly: {len(anom_preds)}, "
@@ -297,13 +272,11 @@ def main() -> None:
         y_ml = anom_preds["ml_prediction"].values
         y_snort = snort_preds["snort_prediction"].values
 
-        # OR: flag if EITHER method flags it
-        y_hybrid_or = np.where(
+        y_hybrid_or = np.where( # OR: flag if EITHER method flags it
             (y_ml == 1) | (y_snort == 1), 1, 0
         )
 
-        # AND: flag only if BOTH flag it
-        y_hybrid_and = np.where(
+        y_hybrid_and = np.where( # AND: flag only if BOTH flag it
             (y_ml == 1) & (y_snort == 1), 1, 0
         )
 
@@ -350,8 +323,7 @@ def main() -> None:
         )
         print(hybrid_df.to_string(index=False))
 
-        # ---- Figure: Hybrid comparison ----
-        fig, ax = plt.subplots(figsize=(10, 6))
+        fig, ax = plt.subplots(figsize=(10, 6)) # Figure: Hybrid comparison
         x = np.arange(len(hybrid_df))
         width = 0.2
 
@@ -401,10 +373,7 @@ def main() -> None:
         if not snort_pred_path.exists():
             print(f"  Missing: {snort_pred_path}")
 
-    # ==========================================
-    # FINAL SUMMARY
-    # ==========================================
-    summary = {
+    summary = {           # FINAL SUMMARY
         "anomaly_model": anomaly_metrics.get("model"),
         "anomaly_f1": anomaly_metrics.get("f1_score"),
         "anomaly_fpr": anomaly_metrics.get(
