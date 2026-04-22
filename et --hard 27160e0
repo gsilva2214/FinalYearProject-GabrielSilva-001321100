@@ -1,0 +1,25 @@
+[33m800a346[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m)[m HEAD@{0}: commit: Add main app entry point
+[33med005c2[m HEAD@{1}: commit: Add Live Network Flow Detector page
+[33md1132c2[m HEAD@{2}: commit: Add Hybrid Fusion analysis page
+[33m4da3a55[m HEAD@{3}: commit: Add Head-to-Head comparison page
+[33m29a5f5f[m HEAD@{4}: commit: Remove old pages, keep streamlined 4-page app
+[33m27160e0[m HEAD@{5}: commit: Add Dataset Overview page
+[33ma586b7a[m HEAD@{6}: pull origin main --rebase (finish): returning to refs/heads/main
+[33ma586b7a[m HEAD@{7}: pull origin main --rebase (pick): Clean codebase - experiment scripts only, preparing for application build
+[33mc2b6fa7[m HEAD@{8}: pull origin main --rebase (start): checkout c2b6fa74c080a39045aad62f7dac8bb7b0b914f1
+[33md380fe2[m HEAD@{9}: commit: Clean codebase - experiment scripts only, preparing for application build
+[33m1f11815[m HEAD@{10}: Branch: renamed refs/heads/main to refs/heads/main
+[33m1f11815[m HEAD@{12}: commit: Run comparison metrics as final pipeline step
+[33me0090bc[m HEAD@{13}: commit: Add comparison metrics between snort and anomaly
+[33mdd4cc42[m HEAD@{14}: commit: Add reproducible end to end pipeline runner
+[33m9207ad0[m HEAD@{15}: commit: Fix paths and outputs for snort analysis scripts
+[33m03ec6be[m HEAD@{16}: commit: Fix paths for snort core figures script
+[33mca0b7a7[m HEAD@{17}: commit: Fix paths for snort comparisons outputs
+[33me9d4d95[m HEAD@{18}: commit: Fix snort parser to use project data directory
+[33m926ce4c[m HEAD@{19}: commit: Fix project root path in anomaly training script
+[33m4c9ff08[m HEAD@{20}: commit: Fix paths for anomaly feature extraction
+[33mc5fd3ce[m HEAD@{21}: commit: Fix project root path in anomaly compare script
+[33m02f1a22[m HEAD@{22}: Branch: renamed refs/heads/master to refs/heads/main
+[33m02f1a22[m HEAD@{24}: commit: Remove stray output placeholder files from src
+[33m50aad77[m HEAD@{25}: commit: Move snort analysis scripts into snort module
+[33m758dd6f[m HEAD@{26}: commit (initial): Snapshot before cleanup
